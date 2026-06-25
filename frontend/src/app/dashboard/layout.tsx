@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
@@ -31,7 +31,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken, refreshToken, refreshTokens } = useAuthStore();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (accessToken) { setReady(true); return; }
+    if (refreshToken) {
+      refreshTokens().catch(() => router.push('/login')).finally(() => setReady(true));
+    } else {
+      router.push('/login');
+    }
+  }, [accessToken]);
 
   const { data: notifs } = useQuery({
     queryKey: ['notifications'],
@@ -110,6 +120,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
       </div>
+    </div>
+  );
+
+  if (!ready) return (
+    <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
