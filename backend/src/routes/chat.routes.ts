@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../config/prisma';
 import { authenticate } from '../middlewares/auth.middleware';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 export const chatRouter = Router();
 chatRouter.use(authenticate);
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
 chatRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
@@ -45,7 +45,7 @@ chatRouter.post('/', async (req: AuthRequest, res: Response) => {
     const lowStock = products.filter(p => p.quantity <= p.alertThreshold);
     const totalProducts = products.length;
 
-    const context = `
+    const systemPrompt = `
 Tu es l'assistant IA de SmartStock AI, une application de gestion de stock pour PME africaines.
 Tu aides l'utilisateur à analyser ses données et prendre des décisions.
 Réponds toujours en français, de façon concise et actionnable.
@@ -67,27 +67,24 @@ ${lowStock.length === 0 ? 'Aucun produit en stock bas' : lowStock.map(p => `- ${
 === FIN DES DONNÉES ===
 `.trim();
 
-    const messages: Anthropic.MessageParam[] = [
-      ...history.slice(-10).map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
-      { role: 'user', content: message },
-    ];
-
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: context,
-      messages,
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: systemPrompt,
     });
 
-    const reply = response.content[0].type === 'text' ? response.content[0].text : '';
+    // Map history to Gemini format (alternating user/model roles)
+    const geminiHistory = history.slice(-10).map((m: { role: string; content: string }) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const chat = model.startChat({ history: geminiHistory });
+    const result = await chat.sendMessage(message);
+    const reply = result.response.text();
+
     return res.json({ reply });
   } catch (err: any) {
     logger.error('chat error', { message: err?.message, status: err?.status, stack: err?.stack });
-    if (err?.status === 401) return res.status(500).json({ error: 'Clé API Anthropic invalide' });
-    if (err?.status === 400) return res.status(500).json({ error: `Requête invalide: ${err?.message}` });
     return res.status(500).json({ error: err?.message ?? 'Erreur IA, réessayez' });
   }
 });
