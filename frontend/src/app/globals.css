@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .form-input {
+    @apply px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
+           focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition;
+  }
+}
+
+@layer base {
+  :root {
+    --color-primary: #10b981;
+    --color-primary-hover: #059669;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+}

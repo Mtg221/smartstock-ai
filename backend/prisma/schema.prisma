@@ -1,0 +1,256 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  country   String   @default("SN")
+  currency  String   @default("XOF")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users    User[]
+  products Product[]
+  sales    Sale[]
+  purchases Purchase[]
+  suppliers Supplier[]
+
+  @@map("companies")
+}
+
+model Role {
+  id          String @id @default(uuid())
+  name        String @unique
+  permissions Json   @default("{}")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  firstName      String   @map("first_name")
+  lastName       String   @map("last_name")
+  roleId         String   @map("role_id")
+  companyId      String   @map("company_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  twoFaEnabled   Boolean  @default(false) @map("two_fa_enabled")
+  twoFaSecret    String?  @map("two_fa_secret")
+  refreshToken   String?  @map("refresh_token")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  role          Role          @relation(fields: [roleId], references: [id])
+  company       Company       @relation(fields: [companyId], references: [id])
+  sales         Sale[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  movements     InventoryMovement[]
+
+  @@map("users")
+}
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  parentId String? @map("parent_id")
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@map("categories")
+}
+
+model Supplier {
+  id        String  @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  rating    Decimal @default(0) @db.Decimal(3, 2)
+  companyId String  @map("company_id")
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  products  Product[]
+  purchases Purchase[]
+
+  @@map("suppliers")
+}
+
+model Product {
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  sku            String    @unique
+  barcode        String?
+  categoryId     String?   @map("category_id")
+  supplierId     String?   @map("supplier_id")
+  companyId      String    @map("company_id")
+  purchasePrice  Decimal   @map("purchase_price") @db.Decimal(12, 2)
+  salePrice      Decimal   @map("sale_price") @db.Decimal(12, 2)
+  quantity       Int       @default(0)
+  alertThreshold Int       @default(10) @map("alert_threshold")
+  expiryDate     DateTime? @map("expiry_date")
+  imageUrl       String?   @map("image_url")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  category        Category?          @relation(fields: [categoryId], references: [id])
+  supplier        Supplier?          @relation(fields: [supplierId], references: [id])
+  company         Company            @relation(fields: [companyId], references: [id])
+  saleItems       SaleItem[]
+  purchaseItems   PurchaseItem[]
+  movements       InventoryMovement[]
+  forecasts       Forecast[]
+  recommendations AIRecommendation[]
+
+  @@index([companyId])
+  @@index([sku])
+  @@index([quantity])
+  @@map("products")
+}
+
+model Sale {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  companyId   String   @map("company_id")
+  totalAmount Decimal  @map("total_amount") @db.Decimal(12, 2)
+  status      String   @default("completed")
+  notes       String?
+  saleDate    DateTime @default(now()) @map("sale_date")
+
+  user      User       @relation(fields: [userId], references: [id])
+  company   Company    @relation(fields: [companyId], references: [id])
+  saleItems SaleItem[]
+
+  @@index([companyId, saleDate])
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String  @map("sale_id")
+  productId String  @map("product_id")
+  quantity  Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(12, 2)
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model Purchase {
+  id           String    @id @default(uuid())
+  supplierId   String    @map("supplier_id")
+  companyId    String    @map("company_id")
+  status       String    @default("pending")
+  totalAmount  Decimal   @map("total_amount") @db.Decimal(12, 2)
+  orderDate    DateTime  @default(now()) @map("order_date")
+  receivedDate DateTime? @map("received_date")
+  notes        String?
+
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  company       Company        @relation(fields: [companyId], references: [id])
+  purchaseItems PurchaseItem[]
+
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String  @id @default(uuid())
+  purchaseId String  @map("purchase_id")
+  productId  String  @map("product_id")
+  quantity   Int
+  unitPrice  Decimal @map("unit_price") @db.Decimal(12, 2)
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@map("purchase_items")
+}
+
+model InventoryMovement {
+  id             String   @id @default(uuid())
+  productId      String   @map("product_id")
+  type           String
+  quantityChange Int      @map("quantity_change")
+  reason         String?
+  userId         String   @map("user_id")
+  movedAt        DateTime @default(now()) @map("moved_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([productId, movedAt])
+  @@map("inventory_movements")
+}
+
+model Forecast {
+  id              String   @id @default(uuid())
+  productId       String   @map("product_id")
+  predictedDemand Int      @map("predicted_demand")
+  forecastDate    DateTime @map("forecast_date")
+  confidenceScore Decimal  @map("confidence_score") @db.Decimal(5, 4)
+  riskLevel       String   @map("risk_level")
+  generatedAt     DateTime @default(now()) @map("generated_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("forecasts")
+}
+
+model AIRecommendation {
+  id                  String   @id @default(uuid())
+  productId           String   @map("product_id")
+  recommendedQuantity Int      @map("recommended_quantity")
+  reasoning           String?
+  isApplied           Boolean  @default(false) @map("is_applied")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("ai_recommendations")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  channel   String   @default("in_app")
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  oldValues Json?    @map("old_values")
+  newValues Json?    @map("new_values")
+  ipAddress String?  @map("ip_address")
+  loggedAt  DateTime @default(now()) @map("logged_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, loggedAt])
+  @@map("audit_logs")
+}

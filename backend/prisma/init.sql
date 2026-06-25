@@ -1,0 +1,2 @@
+-- Initialisation de la base de données SmartStock AI
+-- Les tables sont gérées par Prisma migrate
