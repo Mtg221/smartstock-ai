@@ -9,6 +9,7 @@ interface User {
   lastName: string;
   role: string;
   companyId: string;
+  twoFaEnabled?: boolean;
 }
 
 interface AuthState {
