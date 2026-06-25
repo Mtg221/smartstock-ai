@@ -36,7 +36,7 @@ export const authenticate = async (
       id: user.id,
       email: user.email,
       roleId: user.roleId,
-      companyId: user.companyId,
+      companyId: user.companyId ?? '',
       roleName: user.role.name,
       permissions: user.role.permissions as Record<string, boolean>,
     };

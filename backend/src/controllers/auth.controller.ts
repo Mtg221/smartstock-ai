@@ -31,7 +31,7 @@ const loginSchema = z.object({
   totpCode: z.string().optional(),
 });
 
-const signTokens = (userId: string, email: string, roleId: string, companyId: string) => {
+const signTokens = (userId: string, email: string, roleId: string, companyId: string | null | undefined) => {
   const accessToken = jwt.sign(
     { id: userId, email, roleId, companyId },
     process.env.JWT_SECRET!,
@@ -75,7 +75,7 @@ export const registerCompany = async (req: Request, res: Response) => {
       return { company, user };
     });
 
-    const { accessToken, refreshToken } = signTokens(result.user.id, result.user.email, result.user.roleId, result.user.companyId);
+    const { accessToken, refreshToken } = signTokens(result.user.id, result.user.email, result.user.roleId, result.user.companyId ?? '');
     await prisma.user.update({ where: { id: result.user.id }, data: { refreshToken } });
 
     return res.status(201).json({
@@ -124,7 +124,7 @@ export const register = async (req: Request, res: Response) => {
       include: { role: true },
     });
 
-    const { accessToken, refreshToken } = signTokens(user.id, user.email, user.roleId, user.companyId);
+    const { accessToken, refreshToken } = signTokens(user.id, user.email, user.roleId, user.companyId ?? '');
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken } });
 
     return res.status(201).json({
@@ -159,7 +159,7 @@ export const login = async (req: Request, res: Response) => {
       if (!ok) return res.status(401).json({ error: 'Code 2FA invalide' });
     }
 
-    const { accessToken, refreshToken } = signTokens(user.id, user.email, user.roleId, user.companyId);
+    const { accessToken, refreshToken } = signTokens(user.id, user.email, user.roleId, user.companyId ?? '');
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken } });
 
     return res.json({
@@ -192,7 +192,7 @@ export const refreshTokens = async (req: Request, res: Response) => {
     });
     if (!user) return res.status(401).json({ error: 'Token invalide' });
 
-    const tokens = signTokens(user.id, user.email, user.roleId, user.companyId);
+    const tokens = signTokens(user.id, user.email, user.roleId, user.companyId ?? '');
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken: tokens.refreshToken } });
 
     return res.json(tokens);
