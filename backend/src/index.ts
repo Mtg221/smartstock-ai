@@ -14,6 +14,7 @@ import { usersRouter, categoriesRouter, suppliersRouter, purchasesRouter, report
 import { productsRouter } from './routes/products.routes';
 import { salesRouter } from './routes/sales.routes';
 import { aiRouter } from './routes/ai.routes';
+import { chatRouter } from './routes/chat.routes';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/sales', salesRouter);
 app.use('/api/purchases', purchasesRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/chat', chatRouter);
 app.use('/api/notifications', notificationsRouter);
 
 // Error handler global

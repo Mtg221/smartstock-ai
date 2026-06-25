@@ -9,7 +9,7 @@ import { notificationsApi } from '@/lib/api';
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Truck,
   BarChart3, Brain, Bell, Settings, LogOut, Menu, X,
-  ChevronRight, Building2,
+  ChevronRight, Building2, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { clsx } from 'clsx';
@@ -22,6 +22,7 @@ const NAV = [
   { href: '/dashboard/suppliers', label: 'Fournisseurs', icon: Building2, roles: ['admin', 'gestionnaire'] },
   { href: '/dashboard/reports', label: 'Rapports', icon: BarChart3, roles: ['admin', 'directeur', 'gestionnaire'] },
   { href: '/dashboard/ai', label: 'Prévisions IA', icon: Brain, roles: ['admin', 'directeur', 'gestionnaire'] },
+  { href: '/dashboard/chat', label: 'Assistant IA', icon: MessageSquare, roles: ['admin', 'directeur', 'gestionnaire', 'employe', 'superadmin'] },
   { href: '/dashboard/users', label: 'Utilisateurs', icon: Users, roles: ['admin'] },
   { href: '/dashboard/companies', label: 'Entreprises', icon: Building2, roles: ['superadmin'] },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings, roles: ['admin'] },
