@@ -56,13 +56,21 @@ export const useAuthStore = create<AuthState>()(
 
       refreshTokens: async () => {
         const { refreshToken } = get();
-        if (!refreshToken) return;
+        if (!refreshToken) throw new Error('No refresh token');
         const { data } = await axios.post(`${API}/api/auth/refresh`, { refreshToken });
         set({ accessToken: data.accessToken, refreshToken: data.refreshToken });
       },
 
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
     }),
-    { name: 'smartstock-auth', partialize: (s) => ({ refreshToken: s.refreshToken, user: s.user }) }
+    { 
+      name: 'smartstock-auth',
+      partialize: (s) => ({
+        accessToken: s.accessToken,
+        refreshToken: s.refreshToken,
+        user: s.user,
+        isAuthenticated: s.isAuthenticated,
+      })
+    }
   )
 );
