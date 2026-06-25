@@ -233,3 +233,46 @@ export const verify2FA = async (req: Request & { user?: any }, res: Response) =>
   await prisma.user.update({ where: { id: req.user.id }, data: { twoFaEnabled: true } });
   return res.json({ message: '2FA activé avec succès' });
 };
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requis' });
+
+    const user = await prisma.user.findUnique({ where: { email, isActive: true } });
+    // Toujours répondre 200 pour ne pas révéler si l'email existe
+    if (!user) return res.json({ message: 'Si cet email existe, un lien a été envoyé.' });
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    await redis.set(`reset:${token}`, user.id, 'EX', 3600); // 1h
+
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const { sendPasswordResetEmail } = await import('../utils/mailer');
+    await sendPasswordResetEmail(user.email, user.firstName, resetUrl);
+
+    return res.json({ message: 'Si cet email existe, un lien a été envoyé.' });
+  } catch (err) {
+    logger.error('forgotPassword error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token et mot de passe requis' });
+    if (password.length < 8) return res.status(400).json({ error: 'Mot de passe trop court (min. 8 caractères)' });
+
+    const userId = await redis.get(`reset:${token}`);
+    if (!userId) return res.status(400).json({ error: 'Lien invalide ou expiré' });
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash, refreshToken: null } });
+    await redis.del(`reset:${token}`);
+
+    return res.json({ message: 'Mot de passe réinitialisé avec succès' });
+  } catch (err) {
+    logger.error('resetPassword error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};

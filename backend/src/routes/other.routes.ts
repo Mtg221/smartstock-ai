@@ -6,6 +6,7 @@ import { prisma } from '../config/prisma';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { Response } from 'express';
+import { sendWelcomeEmail, sendNewCompanyEmail } from '../utils/mailer';
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const usersRouter = Router();
@@ -64,6 +65,7 @@ usersRouter.post('/', authorize('admin'), async (req: AuthRequest, res: Response
       include: { role: true },
     });
 
+    sendWelcomeEmail(user.email, user.firstName, req.user!.companyId ?? '', body.password).catch(() => {});
     return res.status(201).json({
       id: user.id,
       email: user.email,
@@ -138,6 +140,7 @@ companiesRouter.post('/', async (req: AuthRequest, res: Response) => {
       return { company, user };
     });
 
+    sendNewCompanyEmail(result.user.email, result.user.firstName, result.company.name, body.password).catch(() => {});
     return res.status(201).json({
       company: result.company,
       admin: {
