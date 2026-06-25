@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { prisma } from '../config/prisma';
 import { authenticate } from '../middlewares/auth.middleware';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 export const chatRouter = Router();
 chatRouter.use(authenticate);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 chatRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
@@ -67,21 +67,22 @@ ${lowStock.length === 0 ? 'Aucun produit en stock bas' : lowStock.map(p => `- ${
 === FIN DES DONNÉES ===
 `.trim();
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: systemPrompt,
+    const messages: Groq.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      ...history.slice(-10).map((m: { role: string; content: string }) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+      { role: 'user', content: message },
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages,
+      max_tokens: 1024,
     });
 
-    // Map history to Gemini format (alternating user/model roles)
-    const geminiHistory = history.slice(-10).map((m: { role: string; content: string }) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-
-    const chat = model.startChat({ history: geminiHistory });
-    const result = await chat.sendMessage(message);
-    const reply = result.response.text();
-
+    const reply = completion.choices[0]?.message?.content ?? '';
     return res.json({ reply });
   } catch (err: any) {
     logger.error('chat error', { message: err?.message, status: err?.status, stack: err?.stack });
