@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -68,7 +69,8 @@ async function main() {
   console.log('✅ Entreprise créée:', company.name);
 
   // ─── Utilisateurs démo ──────────────────────────────────────────────────────
-  const password = await bcrypt.hash('SmartStock2024!', 12);
+  const demoPass = process.env.DEMO_PASSWORD || 'SmartStock2024!';
+  const password = await bcrypt.hash(demoPass, 12);
 
   await Promise.all([
     prisma.user.upsert({
@@ -213,19 +215,25 @@ async function main() {
   console.log(`✅ ${salesCreated} ventes de démonstration créées`);
 
   // ─── Superadmin ─────────────────────────────────────────────────────────────
-  const superPassword = await bcrypt.hash('SuperAdmin2024!', 12);
-  await prisma.user.upsert({
-    where: { email: 'superadmin@smartstock.ai' },
-    update: {},
-    create: {
-      email: 'superadmin@smartstock.ai',
-      passwordHash: superPassword,
-      firstName: 'Super',
-      lastName: 'Admin',
-      roleId: superadminRole.id,
-    },
-  });
-  console.log('✅ Superadmin créé');
+  const superEmail = process.env.SUPERADMIN_EMAIL;
+  const superPwd = process.env.SUPERADMIN_PASSWORD;
+  if (!superEmail || !superPwd) {
+    console.warn('⚠️  SUPERADMIN_EMAIL ou SUPERADMIN_PASSWORD manquant — superadmin ignoré');
+  } else {
+    const superPassword = await bcrypt.hash(superPwd, 12);
+    await prisma.user.upsert({
+      where: { email: superEmail },
+      update: { passwordHash: superPassword },
+      create: {
+        email: superEmail,
+        passwordHash: superPassword,
+        firstName: 'Super',
+        lastName: 'Admin',
+        roleId: superadminRole.id,
+      },
+    });
+    console.log(`✅ Superadmin créé : ${superEmail}`);
+  }
 
   console.log('\n🎉 Seed terminé avec succès !');
   console.log('\n📋 Comptes de démo :');
