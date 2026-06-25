@@ -17,16 +17,12 @@ chatRouter.post('/', async (req: AuthRequest, res: Response) => {
   const companyId = req.user!.companyId;
 
   // Récupérer les données de l'entreprise pour le contexte
-  const [products, lowStock, stats, recentSales] = await Promise.all([
+  const [products, stats, recentSales] = await Promise.all([
     prisma.product.findMany({
       where: { companyId, isActive: true },
       select: { name: true, sku: true, quantity: true, alertThreshold: true, salePrice: true, purchasePrice: true },
       orderBy: { quantity: 'asc' },
       take: 50,
-    }),
-    prisma.product.findMany({
-      where: { companyId, isActive: true, quantity: { lte: prisma.product.fields.alertThreshold } },
-      select: { name: true, quantity: true, alertThreshold: true },
     }),
     prisma.sale.aggregate({
       where: {
@@ -45,7 +41,8 @@ chatRouter.post('/', async (req: AuthRequest, res: Response) => {
     }),
   ]);
 
-  const totalProducts = await prisma.product.count({ where: { companyId, isActive: true } });
+  const lowStock = products.filter(p => p.quantity <= p.alertThreshold);
+  const totalProducts = products.length;
 
   const context = `
 Tu es l'assistant IA de SmartStock AI, une application de gestion de stock pour PME africaines.
