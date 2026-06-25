@@ -73,7 +73,7 @@ export const getRecommendations = async (req: AuthRequest, res: Response) => {
         currentStock: p.quantity,
         predictedDemand30d: Math.round(predictedDemand),
         quantity: Math.ceil(stockNeeded),
-        estimatedCost: Math.ceil(stockNeeded) * (p.purchasePrice ?? 0),
+        estimatedCost: Math.ceil(stockNeeded) * Number(p.purchasePrice ?? 0),
         urgency,
         reasoning: `Basé sur la demande prévue de ${Math.round(predictedDemand)} unités pour les 30 prochains jours`,
       };
@@ -135,7 +135,7 @@ export const detectAnomalies = async (req: AuthRequest, res: Response) => {
     
     movements.forEach(m => {
       if (!productMovements[m.productId]) productMovements[m.productId] = [];
-      productMovements[m.productId].push(m.quantity);
+      productMovements[m.productId].push(m.quantityChange);
     });
 
     Object.entries(productMovements).forEach(([productId, quantities]) => {
@@ -145,7 +145,7 @@ export const detectAnomalies = async (req: AuthRequest, res: Response) => {
       
       quantities.forEach((q, i) => {
         if (Math.abs(q - avg) > 2 * stdDev) {
-          const movement = movements.find(m => m.productId === productId && m.quantity === q);
+          const movement = movements.find(m => m.productId === productId && m.quantityChange === q);
           if (movement) {
             anomalies.push({
               productId,
