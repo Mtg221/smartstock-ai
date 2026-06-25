@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
-import { Brain, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Brain, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 const schema = z.object({
@@ -45,6 +46,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Retour accueil */}
+        <div className="mb-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-600 transition">
+            <ArrowLeft size={16} /> Retour à l'accueil
+          </Link>
+        </div>
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-emerald-600 rounded-2xl mb-4">
