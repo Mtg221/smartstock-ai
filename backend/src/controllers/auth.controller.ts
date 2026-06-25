@@ -17,6 +17,14 @@ const registerSchema = z.object({
   roleId: z.string().uuid().optional(),
 });
 
+const registerCompanySchema = z.object({
+  companyName: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+});
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
@@ -35,6 +43,58 @@ const signTokens = (userId: string, email: string, roleId: string, companyId: st
     { expiresIn: '7d' }
   );
   return { accessToken, refreshToken };
+};
+
+export const registerCompany = async (req: Request, res: Response) => {
+  try {
+    const body = registerCompanySchema.parse(req.body);
+
+    const exists = await prisma.user.findUnique({ where: { email: body.email } });
+    if (exists) return res.status(409).json({ error: 'Email déjà utilisé' });
+
+    const adminRole = await prisma.role.findFirst({ where: { name: 'admin' } });
+    if (!adminRole) return res.status(500).json({ error: 'Rôle admin introuvable' });
+
+    const passwordHash = await bcrypt.hash(body.password, 12);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: { name: body.companyName, country: 'SN', currency: 'XOF' },
+      });
+      const user = await tx.user.create({
+        data: {
+          email: body.email,
+          passwordHash,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          roleId: adminRole.id,
+          companyId: company.id,
+        },
+        include: { role: true },
+      });
+      return { company, user };
+    });
+
+    const { accessToken, refreshToken } = signTokens(result.user.id, result.user.email, result.user.roleId, result.user.companyId);
+    await prisma.user.update({ where: { id: result.user.id }, data: { refreshToken } });
+
+    return res.status(201).json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role: result.user.role.name,
+        companyId: result.user.companyId,
+      },
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ errors: err.errors });
+    logger.error('registerCompany error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
 };
 
 export const register = async (req: Request, res: Response) => {

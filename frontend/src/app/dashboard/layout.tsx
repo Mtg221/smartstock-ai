@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { clsx } from 'clsx';
 
 const NAV = [
-  { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'directeur', 'gestionnaire', 'employe'] },
+  { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'directeur', 'gestionnaire', 'employe', 'superadmin'] },
   { href: '/dashboard/products', label: 'Produits', icon: Package, roles: ['admin', 'gestionnaire', 'employe'] },
   { href: '/dashboard/sales', label: 'Ventes', icon: ShoppingCart, roles: ['admin', 'gestionnaire', 'employe'] },
   { href: '/dashboard/purchases', label: 'Achats', icon: Truck, roles: ['admin', 'gestionnaire'] },
@@ -23,6 +23,7 @@ const NAV = [
   { href: '/dashboard/reports', label: 'Rapports', icon: BarChart3, roles: ['admin', 'directeur', 'gestionnaire'] },
   { href: '/dashboard/ai', label: 'Prévisions IA', icon: Brain, roles: ['admin', 'directeur', 'gestionnaire'] },
   { href: '/dashboard/users', label: 'Utilisateurs', icon: Users, roles: ['admin'] },
+  { href: '/dashboard/companies', label: 'Entreprises', icon: Building2, roles: ['superadmin'] },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings, roles: ['admin'] },
 ];
 

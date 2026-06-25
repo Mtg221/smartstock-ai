@@ -7,6 +7,15 @@ async function main() {
   console.log('🌱 Démarrage du seed SmartStock AI...');
 
   // ─── Rôles ──────────────────────────────────────────────────────────────────
+  const superadminRole = await prisma.role.upsert({
+    where: { name: 'superadmin' },
+    update: {},
+    create: {
+      name: 'superadmin',
+      permissions: { all: true, manage_companies: true, manage_users: true },
+    },
+  });
+
   const roles = await Promise.all([
     prisma.role.upsert({
       where: { name: 'admin' },
@@ -203,13 +212,29 @@ async function main() {
   }
   console.log(`✅ ${salesCreated} ventes de démonstration créées`);
 
+  // ─── Superadmin ─────────────────────────────────────────────────────────────
+  const superPassword = await bcrypt.hash('SuperAdmin2024!', 12);
+  await prisma.user.upsert({
+    where: { email: 'superadmin@smartstock.ai' },
+    update: {},
+    create: {
+      email: 'superadmin@smartstock.ai',
+      passwordHash: superPassword,
+      firstName: 'Super',
+      lastName: 'Admin',
+      roleId: superadminRole.id,
+    },
+  });
+  console.log('✅ Superadmin créé');
+
   console.log('\n🎉 Seed terminé avec succès !');
   console.log('\n📋 Comptes de démo :');
+  console.log('   Superadmin → superadmin@smartstock.ai / SuperAdmin2024!');
   console.log('   Admin      → admin@smartstock.demo');
   console.log('   Directeur  → directeur@smartstock.demo');
   console.log('   Gestionnaire → gestionnaire@smartstock.demo');
   console.log('   Employé    → employe@smartstock.demo');
-  console.log('   Mot de passe : SmartStock2024!');
+  console.log('   Mot de passe démo : SmartStock2024!');
 }
 
 main()

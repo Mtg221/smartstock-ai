@@ -10,15 +10,10 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './middlewares/errorHandler';
 import { authRouter } from './routes/auth.routes';
-import { usersRouter } from './routes/users.routes';
+import { usersRouter, categoriesRouter, suppliersRouter, purchasesRouter, reportsRouter, notificationsRouter, companiesRouter } from './routes/other.routes';
 import { productsRouter } from './routes/products.routes';
-import { categoriesRouter } from './routes/categories.routes';
-import { suppliersRouter } from './routes/suppliers.routes';
 import { salesRouter } from './routes/sales.routes';
-import { purchasesRouter } from './routes/purchases.routes';
-import { reportsRouter } from './routes/reports.routes';
 import { aiRouter } from './routes/ai.routes';
-import { notificationsRouter } from './routes/notifications.routes';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -68,6 +63,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date()
 // Routes API
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/companies', companiesRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/suppliers', suppliersRouter);

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { prisma } from '../config/prisma';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -8,24 +10,152 @@ import { Response } from 'express';
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const usersRouter = Router();
 usersRouter.use(authenticate);
-usersRouter.get('/', authorize('admin'), async (req: AuthRequest, res: Response) => {
+
+usersRouter.get('/', authorize('admin', 'superadmin'), async (req: AuthRequest, res: Response) => {
+  const where = req.user!.roleName === 'superadmin'
+    ? {}
+    : { companyId: req.user!.companyId };
   const users = await prisma.user.findMany({
-    where: { companyId: req.user!.companyId },
+    where,
     select: {
       id: true, email: true, firstName: true, lastName: true,
       isActive: true, twoFaEnabled: true, createdAt: true,
-      roleId: true, companyId: true,
-      role: true,
+      roleId: true, companyId: true, role: true,
     },
   });
   return res.json(users);
 });
+
 usersRouter.get('/me', async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
     include: { role: true, company: true },
   });
   return res.json(user);
+});
+
+const createMemberSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  roleName: z.enum(['directeur', 'gestionnaire', 'employe']),
+});
+
+usersRouter.post('/', authorize('admin'), async (req: AuthRequest, res: Response) => {
+  try {
+    const body = createMemberSchema.parse(req.body);
+    const exists = await prisma.user.findUnique({ where: { email: body.email } });
+    if (exists) return res.status(409).json({ error: 'Email déjà utilisé' });
+
+    const role = await prisma.role.findFirst({ where: { name: body.roleName } });
+    if (!role) return res.status(400).json({ error: 'Rôle invalide' });
+
+    const passwordHash = await bcrypt.hash(body.password, 12);
+    const user = await prisma.user.create({
+      data: {
+        email: body.email,
+        passwordHash,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        roleId: role.id,
+        companyId: req.user!.companyId,
+      },
+      include: { role: true },
+    });
+
+    return res.status(201).json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role.name,
+      companyId: user.companyId,
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ errors: err.errors });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+usersRouter.patch('/:id/deactivate', authorize('admin'), async (req: AuthRequest, res: Response) => {
+  await prisma.user.updateMany({
+    where: { id: req.params.id, companyId: req.user!.companyId },
+    data: { isActive: false },
+  });
+  return res.json({ message: 'Utilisateur désactivé' });
+});
+
+// ─── Companies (superadmin only) ──────────────────────────────────────────────
+export const companiesRouter = Router();
+companiesRouter.use(authenticate, authorize('superadmin'));
+
+companiesRouter.get('/', async (_req: AuthRequest, res: Response) => {
+  const companies = await prisma.company.findMany({
+    include: { _count: { select: { users: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+  return res.json(companies);
+});
+
+const createCompanySchema = z.object({
+  companyName: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(8),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  country: z.string().default('SN'),
+  currency: z.string().default('XOF'),
+});
+
+companiesRouter.post('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const body = createCompanySchema.parse(req.body);
+
+    const exists = await prisma.user.findUnique({ where: { email: body.email } });
+    if (exists) return res.status(409).json({ error: 'Email admin déjà utilisé' });
+
+    const adminRole = await prisma.role.findFirst({ where: { name: 'admin' } });
+    if (!adminRole) return res.status(500).json({ error: 'Rôle admin introuvable' });
+
+    const passwordHash = await bcrypt.hash(body.password, 12);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: { name: body.companyName, country: body.country, currency: body.currency },
+      });
+      const user = await tx.user.create({
+        data: {
+          email: body.email,
+          passwordHash,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          roleId: adminRole.id,
+          companyId: company.id,
+        },
+        include: { role: true },
+      });
+      return { company, user };
+    });
+
+    return res.status(201).json({
+      company: result.company,
+      admin: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+      },
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ errors: err.errors });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+companiesRouter.delete('/:id', async (req: AuthRequest, res: Response) => {
+  await prisma.company.delete({ where: { id: req.params.id } });
+  return res.json({ message: 'Entreprise supprimée' });
 });
 
 // ─── Categories ───────────────────────────────────────────────────────────────
@@ -44,7 +174,7 @@ categoriesRouter.post('/', authorize('admin', 'gestionnaire'), async (req: AuthR
 export const suppliersRouter = Router();
 suppliersRouter.use(authenticate);
 suppliersRouter.get('/', async (req: AuthRequest, res: Response) => {
-  const suppliers = await prisma.supplier.findMany({ where: { companyId: req.user!.companyId } });
+  const suppliers = await prisma.supplier.findMany({ where: { companyId: req.user!.companyId! } });
   return res.json(suppliers);
 });
 suppliersRouter.post('/', authorize('admin', 'gestionnaire'), async (req: AuthRequest, res: Response) => {
@@ -53,7 +183,7 @@ suppliersRouter.post('/', authorize('admin', 'gestionnaire'), async (req: AuthRe
 });
 suppliersRouter.patch('/:id', authorize('admin', 'gestionnaire'), async (req: AuthRequest, res: Response) => {
   const s = await prisma.supplier.updateMany({
-    where: { id: req.params.id, companyId: req.user!.companyId },
+    where: { id: req.params.id, companyId: req.user!.companyId! },
     data: req.body,
   });
   return res.json(s);
@@ -76,7 +206,7 @@ purchasesRouter.post('/', authorize('admin', 'gestionnaire'), async (req: AuthRe
   const purchase = await prisma.purchase.create({
     data: {
       supplierId,
-      companyId: req.user!.companyId,
+      companyId: req.user!.companyId!,
       totalAmount,
       notes,
       purchaseItems: { create: items },

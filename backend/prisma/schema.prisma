@@ -41,7 +41,7 @@ model User {
   firstName      String   @map("first_name")
   lastName       String   @map("last_name")
   roleId         String   @map("role_id")
-  companyId      String   @map("company_id")
+  companyId      String?  @map("company_id")
   isActive       Boolean  @default(true) @map("is_active")
   twoFaEnabled   Boolean  @default(false) @map("two_fa_enabled")
   twoFaSecret    String?  @map("two_fa_secret")
@@ -49,7 +49,7 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at")
 
   role          Role          @relation(fields: [roleId], references: [id])
-  company       Company       @relation(fields: [companyId], references: [id])
+  company       Company?      @relation(fields: [companyId], references: [id])
   sales         Sale[]
   auditLogs     AuditLog[]
   notifications Notification[]

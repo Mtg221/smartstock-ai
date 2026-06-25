@@ -1,10 +1,11 @@
 // auth.routes.ts
 import { Router } from 'express';
-import { register, login, refreshTokens, logout, setup2FA, verify2FA } from '../controllers/auth.controller';
+import { registerCompany, register, login, refreshTokens, logout, setup2FA, verify2FA } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 export const authRouter = Router();
 
+authRouter.post('/register-company', registerCompany);
 authRouter.post('/register', register);
 authRouter.post('/login', login);
 authRouter.post('/refresh', refreshTokens);
