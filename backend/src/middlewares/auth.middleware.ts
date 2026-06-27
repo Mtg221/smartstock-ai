@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma';
+import { logger } from '../utils/logger';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -30,7 +31,7 @@ export const authenticate = async (
       where: { id: decoded.id, isActive: true },
       include: { role: true },
     });
-    if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
+    if (!user) return res.status(401).json({ error: 'Token invalide ou expiré' });
 
     req.user = {
       id: user.id,
@@ -69,7 +70,7 @@ export const auditLog = (action: string, entity: string) =>
           newValues: req.body,
           ipAddress: req.ip,
         },
-      }).catch(() => {}); // log sans bloquer
+      }).catch((err: unknown) => logger.warn(`Audit log failed: ${err}`)); // log sans bloquer
     }
     next();
   };
