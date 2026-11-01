@@ -62,22 +62,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const Sidebar = ({ mobile = false }) => (
     <div className={clsx(
-      'flex flex-col h-full bg-gray-950 text-white',
+      'flex flex-col h-full bg-slate-950 text-white',
       mobile ? 'w-full' : 'w-64'
     )}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
-        <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
-          <Brain size={16} className="text-white" />
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800/80">
+        <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/30">
+          <Brain size={18} className="text-white" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-sm font-semibold">SmartStock AI</p>
-          <p className="text-xs text-gray-500">{user?.role ?? 'Utilisateur'}</p>
+          <p className="text-sm font-bold tracking-tight text-white">SmartStock AI</p>
+          <p className="text-[11px] font-medium text-emerald-400 capitalize">{user?.role ?? 'Utilisateur'}</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav aria-label="Navigation principale" className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {visibleNav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
@@ -85,17 +85,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               key={href}
               href={href}
               onClick={() => setSidebarOpen(false)}
+              aria-current={active ? 'page' : undefined}
               className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition',
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
                 active
-                  ? 'bg-emerald-600/20 text-emerald-400 font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-850/80 hover:bg-slate-900'
               )}
             >
-              <Icon size={16} className="shrink-0" />
-              {label}
+              <Icon size={17} className={clsx('shrink-0', active ? 'text-emerald-400' : 'text-slate-400')} aria-hidden="true" />
+              <span>{label}</span>
               {href === '/dashboard/ai' && (
-                <span className="ml-auto text-xs bg-indigo-600/30 text-indigo-400 px-1.5 py-0.5 rounded">IA</span>
+                <span className="ml-auto text-[10px] font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.5 rounded">
+                  IA
+                </span>
               )}
             </Link>
           );
@@ -103,21 +106,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       {/* User section */}
-      <div className="p-3 border-t border-gray-800">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-semibold shrink-0">
+      <div className="p-3 border-t border-slate-800/80">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
             {user?.firstName?.[0]}{user?.lastName?.[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user?.firstName} {user?.lastName}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            <p className="text-xs font-semibold text-white truncate">{user?.firstName} {user?.lastName}</p>
+            <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="p-1.5 rounded hover:bg-gray-800 text-gray-500 hover:text-red-400 transition"
+            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-red-400 transition"
             title="Se déconnecter"
+            aria-label="Se déconnecter"
           >
-            <LogOut size={15} />
+            <LogOut size={16} />
           </button>
         </div>
       </div>
@@ -156,31 +160,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+            className="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            aria-label="Ouvrir le menu de navigation"
           >
             <Menu size={20} />
           </button>
 
           {/* Breadcrumb */}
-          <div className="hidden lg:flex items-center gap-2 text-sm text-gray-500">
+          <nav aria-label="Fil d'Ariane" className="hidden lg:flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <span>SmartStock AI</span>
-            <ChevronRight size={14} />
-            <span className="text-gray-900 dark:text-white font-medium">
+            <ChevronRight size={14} className="text-slate-400" />
+            <span className="text-slate-900 dark:text-white font-semibold">
               {visibleNav.find(n => pathname === n.href || (n.href !== '/dashboard' && pathname.startsWith(n.href)))?.label ?? 'Dashboard'}
             </span>
-          </div>
+          </nav>
 
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-3 ml-auto">
             <Link
               href="/dashboard/notifications"
-              className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
+              className="relative p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition focus-visible:ring-2 focus-visible:ring-emerald-500"
+              aria-label={unreadCount > 0 ? `${unreadCount} notifications non lues` : 'Notifications'}
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -189,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
           {children}
         </main>
       </div>
