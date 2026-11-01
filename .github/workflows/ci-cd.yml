@@ -135,13 +135,24 @@ jobs:
     name: Deploy to production
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' && secrets.DEPLOY_HOST != ''
+    if: github.ref == 'refs/heads/main'
     environment: production
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check deployment credentials
+        id: check_creds
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "skip_deploy=true" >> $GITHUB_OUTPUT
+            echo "DEPLOY_HOST secret is not configured. Skipping deployment."
+          else
+            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy via SSH
+        if: steps.check_creds.outputs.skip_deploy != 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
